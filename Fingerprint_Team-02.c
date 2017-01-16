@@ -181,6 +181,7 @@ void test_multiple(char* probename, char* dirname, int hflag) {
                 curr->data = loadMinutiae(toload);
                 curr->next = (struct node *) malloc(sizeof(struct node));
                 curr = curr->next;
+                curr->filepath = NULL;
                 //If the pointer returned by malloc was null we ran out of memory
                 if(curr == NULL) {
                     printf("Out of memory!\n");
@@ -244,6 +245,33 @@ int getScore(struct xyt_struct probe, struct xyt_struct galleryimage) {
  * loaded rows.
  */
 struct xyt_struct loadMinutiae(const char *xyt_file) {
-    struct xyt_struct res;
+    struct xyt_struct res = {0};
+
+    FILE* pFile = fopen(xyt_file, "r");
+    if(pFile)
+    {
+        size_t i;
+        char Line[100];
+
+        for(i = 0; i < MAX_MINUTIAE && fgets(Line, 100, pFile) != NULL; i++)
+        {
+            int xcol, ycol, thetacol;
+            if(sscanf(Line, "%d %d %d %*d", &xcol, &ycol, &thetacol) == 3)
+            {
+                res.xcol[i] = xcol;
+                res.ycol[i] = ycol;
+                res.thetacol[i] = thetacol;
+            }
+            else
+            {
+                // read an unexpected number of columns, abort.
+                break;
+            }
+        }
+        res.nrows = i;
+
+        fclose(pFile);
+    }
+
     return res;
 }
