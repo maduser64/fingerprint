@@ -232,6 +232,34 @@ struct xyt_struct alignment(struct xyt_struct probe, struct xyt_struct galleryim
  */
 int getScore(struct xyt_struct probe, struct xyt_struct galleryimage) {
     int score=0;
+
+    char used_gallery[MAX_MINUTIAE] = { 0 };
+    char used_probe[MAX_MINUTIAE]  = { 0 };
+
+    //printf("matching gallery image with %d minutiae against probe image with %d minutiae\n", galleryimage.nrows, probe.nrows);
+
+    int i,j;
+    for(i = 0; i < galleryimage.nrows; i++)
+    {
+    	for(j = 0; j < probe.nrows; j++)
+    	{
+    		if(!used_gallery[i] && !used_probe[j])
+    		{
+    			int distance_spatial = (int)( floor( sqrt( pow(probe.xcol[j] - galleryimage.xcol[i], 2.0) + pow(probe.ycol[j] - galleryimage.ycol[i], 2.0) ) ) );
+    			int distance_angle = abs(probe.thetacol[j] - galleryimage.thetacol[i]);
+				#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+    			distance_angle = MIN(distance_angle, 360-distance_angle);
+    			#undef MIN
+    			if(distance_spatial < threshold_d && distance_angle < threshold_r)
+    			{
+	    			score++;
+					used_gallery[i] = 1;
+					used_probe[j] = 1;
+    			}
+    		}
+    	}
+    }
+
     return score;
 }
 
