@@ -32,8 +32,12 @@
 #include <string.h>
 
 #define MAX_MINUTIAE    130        /* should be ajusted if a file has more minutiae */
-#define A_X             400        /* used for Array in alignment, should be */
-#define A_Y             500        /* adjusted if out of boundaries error occurs*/
+#define PICTURE_MAX_PX  480
+#define THETA_MAX       360
+#define BUCKET_SIZE     10
+#define A_X             2*PICTURE_MAX_PX/BUCKET_SIZE        /* used for Array in alignment, should be */
+#define A_Y             2*PICTURE_MAX_PX/BUCKET_SIZE        /* adjusted if out of boundaries error occurs*/
+#define A_T             THETA_MAX/BUCKET_SIZE
 #define threshold_d      14        /* for getScore */
 #define threshold_r      18        /* for getScore */
 #define thres_t          18        /* for alignment */
@@ -222,6 +226,49 @@ void test_multiple(char* probename, char* dirname, int hflag) {
  * Return the aligned gallery xyt_struct as the result of this function.
  */
 struct xyt_struct alignment(struct xyt_struct probe, struct xyt_struct galleryimage) {
+	int alignmentScore[2*A_X][2*A_Y][2*A_T] = { 0 };
+	int max_score = 0;
+	int max_x = 0;
+	int max_y = 0;
+	int max_t = 0;
+
+    int i,j;
+    for(i = 0; i < galleryimage.nrows; i++)
+    {
+    	for(j = 0; j < probe.nrows; j++)
+    	{
+			int deltaT = probe.thetacol[j] - galleryimage.thetacol[i];
+			float fDeltaT = (float)(deltaT) * PI / 180.0;
+			float fXi = (float)(galleryimage.xcol[i]);
+			float fYi = (float)(galleryimage.ycol[i]);
+			int deltaX = probe.xcol[j] - (int)( floor( fXi * cos(fDeltaT) ) ) - (int)( floor( fYi * sin(fDeltaT) ) );
+			int deltaY = probe.xcol[j] - (int)( floor( fYi * cos(fDeltaT) ) ) + (int)( floor( fXi * sin(fDeltaT) ) );
+
+			int bucketX = (deltaX/BUCKET_SIZE)+A_X;
+			int bucketY = (deltaY/BUCKET_SIZE)+A_Y;
+			int bucketT = (deltaT/BUCKET_SIZE)+A_T;
+
+			alignmentScore[bucketX][bucketY][bucketT]++;
+
+			printf("a");
+			if(alignmentScore[bucketX][bucketY][bucketT] > max_score)
+			{
+				printf("yo\n");
+				max_score = alignmentScore[bucketX][bucketY][bucketT];
+				max_x = bucketX - A_X;
+				max_y = bucketY - A_Y;
+				max_t = bucketT - A_T;
+			}
+		}
+	}
+
+	for(i = 0; i < galleryimage.nrows; i++)
+    {
+		/*galleryimage.xcol[i] += maxX - A_X;
+		galleryimage.ycol[i] += maxY - A_Y;
+		galleryimage.thetacol[i] += maxT - A_T;	*/
+	}
+
     return galleryimage;
 }
 
@@ -235,8 +282,6 @@ int getScore(struct xyt_struct probe, struct xyt_struct galleryimage) {
 
     char used_gallery[MAX_MINUTIAE] = { 0 };
     char used_probe[MAX_MINUTIAE]  = { 0 };
-
-    //printf("matching gallery image with %d minutiae against probe image with %d minutiae\n", galleryimage.nrows, probe.nrows);
 
     int i,j;
     for(i = 0; i < galleryimage.nrows; i++)
